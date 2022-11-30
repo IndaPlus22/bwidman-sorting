@@ -20,6 +20,7 @@ pub struct App {
     window: Window,
     events: Events,
     list: [u32;LIST_SIZE],
+    comparisons: Option<(usize, usize)>
 }
 
 impl App {
@@ -32,7 +33,10 @@ impl App {
             let mut j = i;
             while j >= 1 && self.list[j - 1] > x {
                 self.list[j] = self.list[j - 1]; // Move every element forward one step
+
+                self.comparisons = Some((j - 1, i));
                 self.update_events(); // Update rendered list
+
                 j -= 1;
             }
             self.list[j] = x;
@@ -62,7 +66,8 @@ impl App {
 
         const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
         const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
-
+        const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
+        
         let pillar_width: f64 = args.window_size[0] / (self.list.len() as f64);
         
         self.gl.draw(args.viewport(), |c, gl| {
@@ -75,10 +80,19 @@ impl App {
                     x, y,
                     x + pillar_width - 1.0, y - y * self.list[i] as f64 / LIST_SIZE as f64 // Scale pillar height to cover screen
                 );
+                let mut color = WHITE;
+                // Color pillar red if it's beign compared against another
+                if let Some((comparison1, comparison2)) = self.comparisons {
+                    if i == comparison1 || i == comparison2 {
+                        color = RED;
+                    }
+                }
+
                 // Draw pillar
-                rectangle(WHITE, pillar, c.transform, gl);
+                rectangle(color, pillar, c.transform, gl);
             }
         });
+        self.comparisons = None; // Wipe potential comparison markings
     }
     
     fn update_events(&mut self) {
@@ -117,6 +131,7 @@ fn main() {
         window,
         events,
         list,
+        comparisons: None
     };
     
     app.insertion_sort();
