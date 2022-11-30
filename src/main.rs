@@ -6,10 +6,12 @@ extern crate rand;
 
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{GlGraphics, OpenGL};
+use piston::EventLoop;
 use piston::event_loop::{EventSettings, Events};
 use piston::input::{RenderArgs, RenderEvent};
 use piston::window::WindowSettings;
 use rand::prelude::*;
+use std::{thread, time};
 
 const LIST_SIZE: usize = 64;
 
@@ -19,6 +21,44 @@ pub struct App {
 }
 
 impl App {
+    fn insertion_sort(&mut self, args: &RenderArgs) {
+        for i in 1..self.list.len() {
+            let x = self.list[i]; // Save current element
+            
+            // Loop through all previous elements until the beginning
+            // or until an element greater than x appears
+            let mut j = i;
+            while j >= 1 && self.list[j - 1] > x {
+                self.list[j] = self.list[j - 1]; // Move every element forward one step
+                self.render(&args); // Update rendered list
+
+                // Delay to slow down the algorithm
+                // let duration = time::Duration::from_millis(100);
+                // thread::sleep(duration);
+                j -= 1;
+            }
+            self.list[j] = x;
+        }
+    }
+    
+    fn selection_sort(&mut self, args: &RenderArgs) {
+        
+        
+        self.render(&args); // Update rendered list
+    }
+    
+    fn merge_sort(&mut self, args: &RenderArgs) {
+        
+        
+        self.render(&args); // Update rendered list
+    }
+    
+    fn gnome_sort(&mut self, args: &RenderArgs) {
+        
+        
+        self.render(&args); // Update rendered list
+    }
+
     fn render(&mut self, args: &RenderArgs) {
         use graphics::*;
 
@@ -76,7 +116,10 @@ fn main() {
     let mut events = Events::new(EventSettings::new());
     while let Some(e) = events.next(&mut window) {
         if let Some(args) = e.render_args() {
-            app.render(&args);
+            app.insertion_sort(&args);
+            // app.selection_sort(&args);
+            // app.merge_sort(&args);
+            // app.gnome_sort(&args);
         }
 
         // if let Some(args) = e.update_args() {
