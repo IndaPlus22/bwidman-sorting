@@ -19,66 +19,91 @@ pub struct App {
     gl: GlGraphics, // OpenGL drawing backend.
     window: Window,
     events: Events,
-    list: [u32;LIST_SIZE],
     comparisons: Option<(usize, usize)>
 }
 
 impl App {
-    fn insertion_sort(&mut self) {
-        for i in 1..self.list.len() {
-            let x = self.list[i]; // Save current element
+    fn insertion_sort(&mut self, list: &[u32]) -> &[u32] {
+        for i in 1..list.len() {
+            let x = list[i]; // Save current element
             
             // Loop through all previous elements until the beginning
             // or until an element greater than x appears
             let mut j = i;
-            while j >= 1 && self.list[j - 1] > x {
-                self.list[j] = self.list[j - 1]; // Move every element forward one step
+            while j >= 1 && list[j - 1] > x {
+                list[j] = list[j - 1]; // Move every element forward one step
 
                 self.comparisons = Some((j - 1, i));
-                self.update_events(); // Update rendered list
+                self.update_window(); // Update rendered list
 
                 j -= 1;
             }
-            self.list[j] = x;
+            list[j] = x;
         }
-    }
-    
-    fn selection_sort(&mut self) {
-        
-        
-        self.update_events(); // Update rendered list
-    }
-    
-    fn merge_sort(&mut self) {
-        
-        
-        self.update_events(); // Update rendered list
-    }
-    
-    fn gnome_sort(&mut self) {
-        
-        
-        self.update_events(); // Update rendered list
+        list
     }
 
-    fn render(&mut self, args: &RenderArgs) {
+    fn swap(&mut self, list: &mut [u32], index1: usize, index2: usize) {
+        let temp = list[index1];
+        list[index1] = list[index2];
+        list[index2] = temp;
+    }
+    
+    fn selection_sort(&mut self, list: &[u32]) -> &[u32] {
+        // Loop through list and for every element search forward for a smaller element to switch place with
+        for i in 0..list.len() {
+            let mut minIndex = i;
+            for j in i+1..list.len() {
+                if list[j] < list[minIndex] {
+                    minIndex = j;
+                }
+
+                self.comparisons = Some((j, minIndex));
+                self.update_window(); // Update rendered list
+            }
+            if minIndex != i {
+                self.swap(&mut list, i, minIndex);
+                self.update_window(); // Update rendered list
+            }
+        }
+        list
+    }
+    
+    fn merge_sort(&mut self, list: &[u32]) -> &[u32] {
+        if list.len() == 1 {
+            return list;
+        }
+
+        
+        self.update_window(); // Update rendered list
+        list
+    }
+    
+    fn gnome_sort(&mut self, list: &[u32]) -> &[u32] {
+        
+        
+        self.update_window(); // Update rendered list
+        list
+    }
+
+    fn render(&mut self, args: &RenderArgs, list: &[u32]) {
         use graphics::*;
 
         const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
         const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
         const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
         
-        let pillar_width: f64 = args.window_size[0] / (self.list.len() as f64);
+        let pillar_width: f64 = args.window_size[0] / (list.len() as f64);
         
         self.gl.draw(args.viewport(), |c, gl| {
             // Clear the screen.
             clear(BLACK, gl);
             
-            for i in 0..self.list.len() {
+            for i in 0..list.len() {
                 let (x, y) = (i as f64 * pillar_width, args.window_size[1]);
                 let pillar = rectangle::rectangle_by_corners(
                     x, y,
-                    x + pillar_width - 1.0, y - y * self.list[i] as f64 / LIST_SIZE as f64 // Scale pillar height to cover screen
+                    x + pillar_width - 1.0, y - y * list[i] as f64 / LIST_SIZE as f64 // Scale pillar height to cover screen
                 );
                 let mut color = WHITE;
                 // Color pillar red if it's beign compared against another
@@ -95,7 +120,7 @@ impl App {
         self.comparisons = None; // Wipe potential comparison markings
     }
     
-    fn update_events(&mut self) {
+    fn update_window(&mut self, list: &[u32]) {
         if let Some(e) = self.events.next(&mut self.window) {
             if let Some(args) = e.render_args() {
                 self.render(&args);
@@ -130,20 +155,19 @@ fn main() {
         gl: GlGraphics::new(opengl),
         window,
         events,
-        list,
         comparisons: None
     };
-    
-    app.insertion_sort();
-    // app.selection_sort();
+
+    // app.insertion_sort();
+    app.selection_sort(&list);
     // app.merge_sort();
     // app.gnome_sort();
-    println!("Sorted: {:?}", app.list);
+    println!("Sorted: {:?}", list);
 
     // Keep window alive
     while let Some(e) = app.events.next(&mut app.window) {
         if let Some(args) = e.render_args() {
-            app.render(&args);
+            app.render(&args, &list);
         }
     }
 }
