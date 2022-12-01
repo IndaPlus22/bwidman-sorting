@@ -23,7 +23,7 @@ pub struct App {
 }
 
 impl App {
-    fn insertion_sort(&mut self, list: &[u32]) -> &[u32] {
+    fn insertion_sort(&mut self, list: &mut [u32]) -> Vec<u32> {
         for i in 1..list.len() {
             let x = list[i]; // Save current element
             
@@ -34,22 +34,16 @@ impl App {
                 list[j] = list[j - 1]; // Move every element forward one step
 
                 self.comparisons = Some((j - 1, i));
-                self.update_window(); // Update rendered list
+                self.update_window(list); // Update rendered list
 
                 j -= 1;
             }
             list[j] = x;
         }
-        list
-    }
-
-    fn swap(&mut self, list: &mut [u32], index1: usize, index2: usize) {
-        let temp = list[index1];
-        list[index1] = list[index2];
-        list[index2] = temp;
+        list.to_vec()
     }
     
-    fn selection_sort(&mut self, list: &[u32]) -> &[u32] {
+    fn selection_sort(&mut self, list: &mut [u32]) -> Vec<u32> {
         // Loop through list and for every element search forward for a smaller element to switch place with
         for i in 0..list.len() {
             let mut minIndex = i;
@@ -59,31 +53,32 @@ impl App {
                 }
 
                 self.comparisons = Some((j, minIndex));
-                self.update_window(); // Update rendered list
+                self.update_window(list); // Update rendered list
             }
             if minIndex != i {
-                self.swap(&mut list, i, minIndex);
-                self.update_window(); // Update rendered list
+                list.swap(i, minIndex);
+                self.update_window(list); // Update rendered list
             }
         }
-        list
+        list.to_vec()
     }
     
-    fn merge_sort(&mut self, list: &[u32]) -> &[u32] {
+    fn merge_sort(&mut self, list: &mut [u32]) -> Vec<u32> {
         if list.len() == 1 {
-            return list;
+            return list.to_vec()
         }
-
+        let newlist = &mut list[0..5];
+        self.merge_sort(newlist);
         
-        self.update_window(); // Update rendered list
-        list
+        self.update_window(list); // Update rendered list
+        list.to_vec()
     }
     
-    fn gnome_sort(&mut self, list: &[u32]) -> &[u32] {
+    fn gnome_sort(&mut self, list: &mut [u32]) -> Vec<u32> {
         
         
-        self.update_window(); // Update rendered list
-        list
+        self.update_window(list); // Update rendered list
+        list.to_vec()
     }
 
     fn render(&mut self, args: &RenderArgs, list: &[u32]) {
@@ -123,7 +118,7 @@ impl App {
     fn update_window(&mut self, list: &[u32]) {
         if let Some(e) = self.events.next(&mut self.window) {
             if let Some(args) = e.render_args() {
-                self.render(&args);
+                self.render(&args, list);
             }
         }
     }
@@ -158,10 +153,10 @@ fn main() {
         comparisons: None
     };
 
-    // app.insertion_sort();
-    app.selection_sort(&list);
-    // app.merge_sort();
-    // app.gnome_sort();
+    list = app.insertion_sort(&mut list).try_into().unwrap();
+    // list = app.selection_sort(&mut list).try_into().unwrap();
+    // list = app.merge_sort(&mut list).try_into().unwrap();
+    // list = app.gnome_sort(&mut list).try_into().unwrap();
     println!("Sorted: {:?}", list);
 
     // Keep window alive
