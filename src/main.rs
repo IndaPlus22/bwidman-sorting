@@ -17,7 +17,7 @@ use rand::prelude::*;
 // 3: Merge sort
 // 4: Slow sort
 const ALGORITHM: u8 = 4;
-const LIST_SIZE: usize = 100;
+const LIST_SIZE: usize = 50;
 const FPS: u64 = 10;
 
 pub struct App {
@@ -133,10 +133,10 @@ impl App {
         if list[m] > list[r] {
             list.swap(m, r);
         }
+        self.update_window(list, Some((m, r))); // Update rendered list
 
         self.slow_sort(list, l, r - 1); // Recurse without maximum that's at the end
         
-        self.update_window(list, None); // Update rendered list
         return;
     }
 
