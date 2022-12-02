@@ -12,10 +12,10 @@ use piston::input::{RenderArgs, RenderEvent};
 use piston::window::WindowSettings;
 use rand::prelude::*;
 
-// 1: insertion
-// 2: selection
-// 3: merge
-// 4: gnome
+// 1: Insertion sort
+// 2: Selection sort
+// 3: Merge sort
+// 4: Slow sort
 const ALGORITHM: u8 = 4;
 const LIST_SIZE: usize = 100;
 const FPS: u64 = 10;
@@ -27,7 +27,7 @@ pub struct App {
 }
 
 impl App {
-    fn insertion_sort(&mut self, list: &mut [u32]) -> Vec<u32> {
+    fn insertion_sort(&mut self, list: &mut Vec<u32>) {
         for i in 1..list.len() {
             let x = list[i]; // Save current element
             
@@ -43,10 +43,10 @@ impl App {
             }
             list[j] = x;
         }
-        return list.to_vec()
+        return;
     }
     
-    fn selection_sort(&mut self, list: &mut [u32]) -> Vec<u32> {
+    fn selection_sort(&mut self, list: &mut Vec<u32>) {
         // Loop through list and for every element search forward for a smaller element to switch place with
         for i in 0..list.len() {
             let mut min_index = i;
@@ -61,22 +61,26 @@ impl App {
                 self.update_window(list, None); // Update rendered list
             }
         }
-        return list.to_vec()
+        return;
     }
     
-    fn merge_sort(&mut self, list: &mut [u32]) -> Vec<u32> {
+    fn merge_sort(&mut self, list: &mut Vec<u32>) {
         if list.len() == 1 {
-            return list.to_vec()
+            return;
         }
-        let (left, right) = list.split_at_mut(list.len()/2);
+        let length = list.len();
+        let (left, right) = list.split_at_mut(length / 2);
+        let mut left_vec = left.to_vec();
+        let mut right_vec = right.to_vec();
         
-        let mut left_vec = self.merge_sort(left);
-        let mut right_vec = self.merge_sort(right);
+        self.merge_sort(&mut left_vec);
+        self.merge_sort(&mut right_vec);
         
-        return self.merge(list, &mut left_vec, &mut right_vec)
+        self.merge(list, &mut left_vec, &mut right_vec);
+        return;
     }
     
-    fn merge(&mut self, list: &mut [u32], left: &mut Vec<u32>, right: &mut Vec<u32>) -> Vec<u32> {
+    fn merge(&mut self, list: &mut Vec<u32>, left: &mut Vec<u32>, right: &mut Vec<u32>) {
         let mut merge = vec![];
 
         while left.len() > 0 && right.len() > 0 {
@@ -97,26 +101,43 @@ impl App {
             right.remove(0);
         }
 
+        *list = merge;
         self.update_window(list, None); // Update rendered list
-        return merge
+        return;
     }
 
-    /**
+    /*
     * Sorts an array by ignoring it and then printing out a new, 
     * sorted array with its own "Alternative Values."
     *
     * If the new array does not appear sorted,
-    * you have been manipulated by MSM
+    * you have been manipulated by LSD
     */
-    fn conway_sort(&self, _list: &mut [u32]) -> Vec<u32> {
-        vec![ 15, 16, 17, 18, 19, 20 ]
+    fn _conway_sort(&self, list: &mut Vec<u32>) {
+        *list = vec![ 15, 16, 17, 18, 19, 20 ];
     }
     
-    fn gnome_sort(&mut self, list: &mut [u32]) -> Vec<u32> {
-        // Render gnome image
+    /*
+    Complexity: n^(log_2(n)/2)
+    */
+    fn slow_sort(&mut self, list: &mut Vec<u32>, l: usize, r: usize) {
+        if l >= r {
+            return;
+        }
+        let m = (l + r) / 2; // Middle index
+
+        self.slow_sort(list, l, m); // Find maximum of first half
+        self.slow_sort(list, m + 1, r); // Find maximum of second half
+        
+        // Find the largest of the two maximum's found
+        if list[m] > list[r] {
+            list.swap(m, r);
+        }
+
+        self.slow_sort(list, l, r - 1); // Recurse without maximum that's at the end
         
         self.update_window(list, None); // Update rendered list
-        return list.to_vec()
+        return;
     }
 
     fn render(&mut self, args: &RenderArgs, list: &[u32], comparisons: Option<(usize, usize)>) {
@@ -193,14 +214,15 @@ fn main() {
         events,
     };
 
-    list = match ALGORITHM {
-        1 => app.insertion_sort(&mut list),
-        2 => app.selection_sort(&mut list),
-        3 => app.merge_sort(&mut list),
-        4 => app.conway_sort(&mut list),
-        5 => app.gnome_sort(&mut list),
+    let mut vec = list.to_vec();
+    match ALGORITHM {
+        1 => app.insertion_sort(&mut vec),
+        2 => app.selection_sort(&mut vec),
+        3 => app.merge_sort(&mut vec),
+        4 => app.slow_sort(&mut vec, 0, LIST_SIZE - 1),
         _ => todo!(),
-    }.try_into().unwrap();
+    };
+    list = vec.try_into().expect("Wrong Vec size");
     println!("Sorted: {:?}", list);
 
     // Keep window alive
