@@ -12,6 +12,11 @@ use piston::input::{RenderArgs, RenderEvent};
 use piston::window::WindowSettings;
 use rand::prelude::*;
 
+// 1: insertion
+// 2: selection
+// 3: merge
+// 4: gnome
+const ALGORITHM: u8 = 4;
 const LIST_SIZE: usize = 100;
 const FPS: u64 = 10;
 
@@ -19,7 +24,6 @@ pub struct App {
     gl: GlGraphics, // OpenGL drawing backend.
     window: Window,
     events: Events,
-    comparisons: Option<(usize, usize)>
 }
 
 impl App {
@@ -33,55 +37,89 @@ impl App {
             while j >= 1 && list[j - 1] > x {
                 list[j] = list[j - 1]; // Move every element forward one step
 
-                self.comparisons = Some((j - 1, i));
-                self.update_window(list); // Update rendered list
+                self.update_window(list, Some((j - 1, i))); // Update rendered list
 
                 j -= 1;
             }
             list[j] = x;
         }
-        list.to_vec()
+        return list.to_vec()
     }
     
     fn selection_sort(&mut self, list: &mut [u32]) -> Vec<u32> {
         // Loop through list and for every element search forward for a smaller element to switch place with
         for i in 0..list.len() {
-            let mut minIndex = i;
+            let mut min_index = i;
             for j in i+1..list.len() {
-                if list[j] < list[minIndex] {
-                    minIndex = j;
+                if list[j] < list[min_index] {
+                    min_index = j;
                 }
-
-                self.comparisons = Some((j, minIndex));
-                self.update_window(list); // Update rendered list
+                self.update_window(list, Some((j, min_index))); // Update rendered list
             }
-            if minIndex != i {
-                list.swap(i, minIndex);
-                self.update_window(list); // Update rendered list
+            if min_index != i {
+                list.swap(i, min_index);
+                self.update_window(list, None); // Update rendered list
             }
         }
-        list.to_vec()
+        return list.to_vec()
     }
     
     fn merge_sort(&mut self, list: &mut [u32]) -> Vec<u32> {
         if list.len() == 1 {
             return list.to_vec()
         }
-        let newlist = &mut list[0..5];
-        self.merge_sort(newlist);
+        let (left, right) = list.split_at_mut(list.len()/2);
         
-        self.update_window(list); // Update rendered list
-        list.to_vec()
+        let mut left_vec = self.merge_sort(left);
+        let mut right_vec = self.merge_sort(right);
+        
+        return self.merge(list, &mut left_vec, &mut right_vec)
+    }
+    
+    fn merge(&mut self, list: &mut [u32], left: &mut Vec<u32>, right: &mut Vec<u32>) -> Vec<u32> {
+        let mut merge = vec![];
+
+        while left.len() > 0 && right.len() > 0 {
+            if left[0] > right[0] {
+                merge.push(right[0]);
+                right.remove(0);
+            } else {
+                merge.push(left[0]);
+                left.remove(0);
+            }
+        }
+        while left.len() > 0 {
+            merge.push(left[0]);
+            left.remove(0);
+        }
+        while right.len() > 0 {
+            merge.push(right[0]);
+            right.remove(0);
+        }
+
+        self.update_window(list, None); // Update rendered list
+        return merge
+    }
+
+    /**
+    * Sorts an array by ignoring it and then printing out a new, 
+    * sorted array with its own "Alternative Values."
+    *
+    * If the new array does not appear sorted,
+    * you have been manipulated by MSM
+    */
+    fn conway_sort(&self, _list: &mut [u32]) -> Vec<u32> {
+        vec![ 15, 16, 17, 18, 19, 20 ]
     }
     
     fn gnome_sort(&mut self, list: &mut [u32]) -> Vec<u32> {
+        // Render gnome image
         
-        
-        self.update_window(list); // Update rendered list
-        list.to_vec()
+        self.update_window(list, None); // Update rendered list
+        return list.to_vec()
     }
 
-    fn render(&mut self, args: &RenderArgs, list: &[u32]) {
+    fn render(&mut self, args: &RenderArgs, list: &[u32], comparisons: Option<(usize, usize)>) {
         use graphics::*;
 
         const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
@@ -100,9 +138,10 @@ impl App {
                     x, y,
                     x + pillar_width - 1.0, y - y * list[i] as f64 / LIST_SIZE as f64 // Scale pillar height to cover screen
                 );
+
                 let mut color = WHITE;
-                // Color pillar red if it's beign compared against another
-                if let Some((comparison1, comparison2)) = self.comparisons {
+                // Color pillar red if it's being compared against another
+                if let Some((comparison1, comparison2)) = comparisons {
                     if i == comparison1 || i == comparison2 {
                         color = RED;
                     }
@@ -110,15 +149,17 @@ impl App {
 
                 // Draw pillar
                 rectangle(color, pillar, c.transform, gl);
+
+                // Play tone
+
             }
         });
-        self.comparisons = None; // Wipe potential comparison markings
     }
     
-    fn update_window(&mut self, list: &[u32]) {
+    fn update_window(&mut self, list: &[u32], comparisons: Option<(usize, usize)>) {
         if let Some(e) = self.events.next(&mut self.window) {
             if let Some(args) = e.render_args() {
-                self.render(&args, list);
+                self.render(&args, list, comparisons);
             }
         }
     }
@@ -150,19 +191,22 @@ fn main() {
         gl: GlGraphics::new(opengl),
         window,
         events,
-        comparisons: None
     };
 
-    list = app.insertion_sort(&mut list).try_into().unwrap();
-    // list = app.selection_sort(&mut list).try_into().unwrap();
-    // list = app.merge_sort(&mut list).try_into().unwrap();
-    // list = app.gnome_sort(&mut list).try_into().unwrap();
+    list = match ALGORITHM {
+        1 => app.insertion_sort(&mut list),
+        2 => app.selection_sort(&mut list),
+        3 => app.merge_sort(&mut list),
+        4 => app.conway_sort(&mut list),
+        5 => app.gnome_sort(&mut list),
+        _ => todo!(),
+    }.try_into().unwrap();
     println!("Sorted: {:?}", list);
 
     // Keep window alive
     while let Some(e) = app.events.next(&mut app.window) {
         if let Some(args) = e.render_args() {
-            app.render(&args, &list);
+            app.render(&args, &list, None);
         }
     }
 }
